@@ -7,6 +7,12 @@ export interface CurseValidationResult {
   isComplete: boolean;
 }
 
+export interface CurseHistoryEntry {
+  attemptNumber: number; // 1-based
+  curse: ActiveCurseState;
+  satisfied: boolean; // Did player satisfy it or was it bypassed?
+}
+
 const ALL_CURSE_TEMPLATES: {
   id: CurseId;
   name: string;
@@ -14,70 +20,95 @@ const ALL_CURSE_TEMPLATES: {
   shortRule: (prevGuess: string, opt?: string) => string;
   description: (prevGuess: string, opt?: string) => string;
   flavor: string;
+  // Return false if this curse would make it IMPOSSIBLE to ever guess the target word
+  isFair: (prevGuess: string, targetWord: string, opt?: string) => boolean;
 }[] = [
   {
     id: 'ECHO_ONE',
     name: 'Echo Fragment',
     icon: '🔮',
-    shortRule: (prev) => `Must contain at least 1 letter from "${prev}"`,
-    description: (prev) => `The void echoes: Your next guess must contain at least 1 letter that was in "${prev}".`,
+    shortRule: (prev) => `Use at least 1 letter from "${prev}"`,
+    description: (prev) => `The void echoes: Your next guess must contain at least 1 letter from "${prev}".`,
     flavor: 'A whisper from your past attempt lingers in the void.',
+    // Fair as long as at least one letter from prevGuess exists anywhere in the valid word list
+    // Always fair: player can always include a prev letter without blocking the answer
+    isFair: () => true,
   },
   {
     id: 'ECHO_TWO',
     name: 'Twin Chains',
     icon: '⛓️',
-    shortRule: (prev) => `Must contain at least 2 letters from "${prev}"`,
+    shortRule: (prev) => `Use at least 2 letters from "${prev}"`,
     description: (prev) => `Dual binding: Your next guess must include at least 2 letters from "${prev}".`,
     flavor: 'Two phantom glyphs bind your next move.',
+    // Always fair: player can include 2 prev letters and still guess the target word eventually
+    isFair: () => true,
   },
   {
     id: 'ALPHA_LINK',
     name: 'Alpha Link',
     icon: '⚡',
     shortRule: (prev) => `Must start with "${prev[0]}"`,
-    description: (prev) => `Prefix lock: Your next guess MUST begin with the letter "${prev[0]}".`,
+    description: (prev) => `Prefix lock: Your next guess MUST begin with "${prev[0]}".`,
     flavor: 'The opening rune is forged in stone.',
+    // Only fair if the target word starts with the same letter — otherwise it blocks a correct guess on this turn
+    isFair: (prev, target) => target[0] === prev[0],
   },
   {
     id: 'OUROBOROS',
     name: 'Ouroboros',
     icon: '🔁',
     shortRule: (prev) => `Must start with "${prev[prev.length - 1]}"`,
-    description: (prev) => `Tail to head: Your next guess MUST start with "${prev[prev.length - 1]}" (last letter of "${prev}").`,
+    description: (prev) => `Tail to head: Your next guess MUST start with "${prev[prev.length - 1]}".`,
     flavor: 'The serpent consumes its own tail.',
+    // Only fair if target word starts with last letter of prevGuess
+    isFair: (prev, target) => target[0] === prev[prev.length - 1],
   },
   {
     id: 'GLITCH_MIRAGE',
     name: 'Glitch Mirage',
     icon: '🎭',
-    shortRule: () => '1 tile will show a FALSE color clue',
-    description: () => 'Sensory illusion: One tile in your evaluated guess will display a false/inverted color clue (you won’t know which!).',
+    shortRule: () => '1 tile will show a false color clue',
+    description: () => 'Sensory illusion: One tile in your evaluated guess will display a false/inverted color clue.',
     flavor: 'A deceptive mirage alters your reality.',
+    // Always fair — doesn't restrict what guess can be made
+    isFair: () => true,
   },
   {
     id: 'OVERLOAD_TIMER',
     name: 'Overload Pulse',
     icon: '⏱️',
-    shortRule: () => '30s Countdown! Submit or repeat previous word',
-    description: () => 'Reactor overload: You have 30 seconds to submit a valid word, or your previous guess will be auto-submitted and a turn wasted!',
+    shortRule: () => '30s Countdown! Submit or your previous word repeats',
+    description: () => 'Reactor overload: You have 30 seconds to submit, or your previous guess repeats and wastes a turn!',
     flavor: 'The core is unstable. Think fast.',
+    // Always fair — doesn't block any specific guess
+    isFair: () => true,
   },
   {
     id: 'VOWEL_BAN',
     name: 'Forbidden Rune',
     icon: '🚫',
     shortRule: (_, opt) => `Forbidden letter: "${opt || 'E'}"`,
-    description: (_, opt) => `Taboo seal: You are forbidden from using the letter "${opt || 'E'}" in this guess.`,
+    description: (_, opt) => `Taboo seal: Forbidden from using the letter "${opt || 'E'}" this guess.`,
     flavor: 'An ancient seal locks away a sacred letter.',
+    // Only fair if the target word does NOT contain the banned letter
+    isFair: (_, target, opt) => !target.includes((opt || 'E').toUpperCase()),
   },
   {
     id: 'ANCHOR_SLOT',
     name: 'Anchor Slot',
     icon: '🎯',
-    shortRule: (prev) => `Must match 1 exact letter position with "${prev}"`,
-    description: (prev) => `Positional resonance: Must share at least one exact letter at the exact same slot as "${prev}".`,
+    shortRule: (prev) => `Must match 1 exact position with "${prev}"`,
+    description: (prev) => `Positional resonance: Must share at least one exact letter-slot as "${prev}".`,
     flavor: 'An immutable coordinate anchors your guess.',
+    // Only fair if the target word itself satisfies it (i.e., target shares at least one slot with prevGuess)
+    // This ensures the player isn't blocked from guessing the answer
+    isFair: (prev, target) => {
+      for (let i = 0; i < Math.min(prev.length, target.length); i++) {
+        if (prev[i] === target[i]) return true;
+      }
+      return false;
+    },
   },
 ];
 
@@ -95,45 +126,78 @@ function simpleHash(str: string): number {
 }
 
 /**
+ * Pick a banned letter for VOWEL_BAN that isn't in the target word
+ * so it's always fair.
+ */
+function pickFairBannedLetter(
+  targetWord: string,
+  dateKey: string,
+  attemptIndex: number,
+  mode: 'DAILY' | 'PRACTICE'
+): string | undefined {
+  // Common letters, try to pick one absent from target
+  const candidates = ['E', 'A', 'R', 'I', 'O', 'T', 'N', 'S', 'L', 'C', 'D', 'P'];
+  const absent = candidates.filter((l) => !targetWord.includes(l));
+
+  if (absent.length === 0) return undefined; // Can't ban any letter fairly
+
+  if (mode === 'DAILY') {
+    const idx = simpleHash(`${dateKey}_vowel_${attemptIndex}`) % absent.length;
+    return absent[idx];
+  }
+  return absent[Math.floor(Math.random() * absent.length)];
+}
+
+/**
  * Generate the active curse for a given attempt index (0 to 5)
  * - Attempt 0 (Guess 1): null
- * - Attempt 1..4 (Guess 2..5): active curse
+ * - Attempt 1..4 (Guess 2..5): fair curse (filtered against targetWord)
  * - Attempt 5 (Guess 6): null ("Final Stand")
+ *
+ * targetWord is used to ensure no curse makes the correct answer unguessable this turn.
  */
 export function getCurseForAttempt(
   attemptIndex: number,
   dateKey: string,
   prevGuess: string,
-  mode: 'DAILY' | 'PRACTICE'
+  mode: 'DAILY' | 'PRACTICE',
+  targetWord: string
 ): ActiveCurseState | null {
-  // Guess 1 (index 0) has NO curse
   if (attemptIndex === 0) return null;
-
-  // Guess 6 (index 5 - the final attempt) has NO curse
   if (attemptIndex >= 5) return null;
-
   if (!prevGuess || prevGuess.length < 5) return null;
 
   const prevUpper = prevGuess.toUpperCase();
+  const targetUpper = targetWord.toUpperCase();
+
+  // Build the fair subset of curse templates for this context
+  // First determine candidate banned letter for VOWEL_BAN
+  const fairBannedLetter = pickFairBannedLetter(targetUpper, dateKey, attemptIndex, mode);
+
+  const fairTemplates = ALL_CURSE_TEMPLATES.filter((t) => {
+    const opt = t.id === 'VOWEL_BAN' ? fairBannedLetter : undefined;
+    // VOWEL_BAN is excluded if no safe letter can be banned
+    if (t.id === 'VOWEL_BAN' && !fairBannedLetter) return false;
+    return t.isFair(prevUpper, targetUpper, opt);
+  });
+
+  // If no fair curses available, return null (no curse this turn)
+  if (fairTemplates.length === 0) return null;
 
   let selectedIndex = 0;
   if (mode === 'DAILY') {
     const seed = `${dateKey}_curse_attempt_${attemptIndex}`;
     const hash = simpleHash(seed);
-    selectedIndex = hash % ALL_CURSE_TEMPLATES.length;
+    selectedIndex = hash % fairTemplates.length;
   } else {
-    selectedIndex = Math.floor(Math.random() * ALL_CURSE_TEMPLATES.length);
+    selectedIndex = Math.floor(Math.random() * fairTemplates.length);
   }
 
-  const template = ALL_CURSE_TEMPLATES[selectedIndex];
+  const template = fairTemplates[selectedIndex];
 
-  // Optional parameters for specific curses
   let bannedLetter: string | undefined = undefined;
   if (template.id === 'VOWEL_BAN') {
-    // Pick 'E', 'A', 'I', 'O', or 'R'
-    const pool = ['E', 'A', 'I', 'O', 'R', 'T'];
-    const bIndex = mode === 'DAILY' ? simpleHash(`${dateKey}_vowel_${attemptIndex}`) % pool.length : Math.floor(Math.random() * pool.length);
-    bannedLetter = pool[bIndex];
+    bannedLetter = fairBannedLetter;
   }
 
   let timeLimit: number | undefined = undefined;
@@ -143,7 +207,9 @@ export function getCurseForAttempt(
 
   let deceptiveIndex: number | undefined = undefined;
   if (template.id === 'GLITCH_MIRAGE') {
-    deceptiveIndex = mode === 'DAILY' ? simpleHash(`${dateKey}_deceptive_${attemptIndex}`) % 5 : Math.floor(Math.random() * 5);
+    deceptiveIndex = mode === 'DAILY'
+      ? simpleHash(`${dateKey}_deceptive_${attemptIndex}`) % 5
+      : Math.floor(Math.random() * 5);
   }
 
   return {
@@ -208,13 +274,10 @@ export function validateCurse(
     case 'ALPHA_LINK': {
       const req = prevUpper[0];
       const isComplete = guessUpper.startsWith(req);
-      const progressText = isComplete
-        ? `✓ Starts with '${req}'`
-        : `Must start with '${req}'`;
       return {
         valid: isComplete,
-        reason: isComplete ? undefined : `Must start with the letter "${req}"`,
-        progressText,
+        reason: isComplete ? undefined : `Must start with "${req}"`,
+        progressText: isComplete ? `✓ Starts with '${req}'` : `Must start with '${req}'`,
         isComplete,
       };
     }
@@ -222,13 +285,10 @@ export function validateCurse(
     case 'OUROBOROS': {
       const req = prevUpper[prevUpper.length - 1];
       const isComplete = guessUpper.startsWith(req);
-      const progressText = isComplete
-        ? `✓ Starts with '${req}'`
-        : `Must start with '${req}'`;
       return {
         valid: isComplete,
         reason: isComplete ? undefined : `Must start with "${req}" (last letter of "${prevUpper}")`,
-        progressText,
+        progressText: isComplete ? `✓ Starts with '${req}'` : `Must start with '${req}'`,
         isComplete,
       };
     }
@@ -237,32 +297,24 @@ export function validateCurse(
       const banned = (curse.bannedLetter || 'E').toUpperCase();
       const containsBanned = guessUpper.includes(banned);
       const isComplete = !containsBanned;
-      const progressText = isComplete
-        ? `✓ No '${banned}' used`
-        : `❌ Contains forbidden '${banned}'`;
       return {
         valid: isComplete,
         reason: isComplete ? undefined : `Contains forbidden letter "${banned}"`,
-        progressText,
+        progressText: isComplete ? `✓ No '${banned}' used` : `❌ Contains forbidden '${banned}'`,
         isComplete,
       };
     }
 
     case 'ANCHOR_SLOT': {
-      let matchedIndices: number[] = [];
+      const matchedSlots: number[] = [];
       for (let i = 0; i < Math.min(guessUpper.length, prevUpper.length); i++) {
-        if (guessUpper[i] === prevUpper[i]) {
-          matchedIndices.push(i + 1);
-        }
+        if (guessUpper[i] === prevUpper[i]) matchedSlots.push(i + 1);
       }
-      const isComplete = matchedIndices.length >= 1;
-      const progressText = isComplete
-        ? `✓ Slot ${matchedIndices.join(', ')} anchored`
-        : `0/1 slot matched with "${prevUpper}"`;
+      const isComplete = matchedSlots.length >= 1;
       return {
         valid: isComplete,
-        reason: isComplete ? undefined : `Must place at least 1 letter at the exact same position as in "${prevUpper}"`,
-        progressText,
+        reason: isComplete ? undefined : `Must place at least 1 letter at the same slot as in "${prevUpper}"`,
+        progressText: isComplete ? `✓ Slot ${matchedSlots.join(', ')} anchored` : `0/1 slot matched`,
         isComplete,
       };
     }
@@ -270,10 +322,6 @@ export function validateCurse(
     case 'GLITCH_MIRAGE':
     case 'OVERLOAD_TIMER':
     default:
-      return {
-        valid: true,
-        progressText: 'Active',
-        isComplete: true,
-      };
+      return { valid: true, progressText: 'Active', isComplete: true };
   }
 }

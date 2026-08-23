@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { GameMode, LetterStatus, EvaluatedLetter, GameStatus, UserProfile, ActiveCurseState } from '../../types';
+import { CurseHistoryEntry } from '../../services/curses';
 import { getDailyWordInfo, getRandomTargetWord, isValidWord, evaluateGuess } from '../../services/dictionary';
 import { getDailyRecord, saveDailyRecord, recordDailyGameResult, recordPracticeGameResult } from '../../services/storage';
 import { getCurseForAttempt, validateCurse } from '../../services/curses';
@@ -41,6 +42,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
   
   // Curse state
   const [activeCurse, setActiveCurse] = useState<ActiveCurseState | null>(null);
+  const [curseHistory, setCurseHistory] = useState<CurseHistoryEntry[]>([]);
   const [timerSeconds, setTimerSeconds] = useState<number | undefined>(undefined);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -71,6 +73,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     prevGuessWord: string,
     targetMode: GameMode,
     dKey: string,
+    tWord: string,
     notify: boolean = false
   ) => {
     clearCurseTimer();
@@ -81,7 +84,6 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     }
 
     if (attemptIdx >= 5) {
-      // Attempt 6 (Final Stand)
       setActiveCurse(null);
       if (notify) {
         sound.playCurseLifted();
@@ -90,10 +92,16 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       return;
     }
 
-    const nextCurse = getCurseForAttempt(attemptIdx, dKey, prevGuessWord, targetMode);
+    const nextCurse = getCurseForAttempt(attemptIdx, dKey, prevGuessWord, targetMode, tWord);
     setActiveCurse(nextCurse);
 
     if (nextCurse) {
+      // Record this curse in history
+      setCurseHistory((prev) => [
+        ...prev,
+        { attemptNumber: attemptIdx + 1, curse: nextCurse, satisfied: false },
+      ]);
+
       if (notify) {
         sound.playCurseTrigger();
         onShowToast(`Curse Awakened: ${nextCurse.name}`, nextCurse.icon);
@@ -109,6 +117,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
   const initGame = useCallback((targetMode: GameMode) => {
     clearCurseTimer();
     setMode(targetMode);
+    setCurseHistory([]);
     setCurrentGuess('');
     setIsShaking(false);
     setShakingRowIndex(-1);
@@ -157,7 +166,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         } else {
           // In progress daily: restore active curse silently
           const lastGuess = existing.guesses[existing.guesses.length - 1] || '';
-          applyCurseForAttempt(existing.guesses.length, lastGuess, 'DAILY', info.dateKey, false);
+          applyCurseForAttempt(existing.guesses.length, lastGuess, 'DAILY', info.dateKey, info.word, false);
         }
       } else {
         setGuesses([]);
@@ -240,6 +249,15 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       onShowToast(`Curse Blocked: ${curseCheck.reason}`, activeCurse?.icon || '🔮');
       setTimeout(() => setIsShaking(false), 500);
       return;
+    }
+
+    // Mark the active curse as satisfied before clearing
+    if (activeCurse && curseCheck.isComplete) {
+      setCurseHistory((prev) =>
+        prev.map((entry, i) =>
+          i === prev.length - 1 ? { ...entry, satisfied: true } : entry
+        )
+      );
     }
 
     // Stop timer while processing evaluation
@@ -398,7 +416,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           }
 
           // Advance Curse for Next Turn
-          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey, true);
+          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey, targetWord, true);
         }
       }
 
@@ -529,6 +547,8 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         validation={currentValidation}
         timerSeconds={timerSeconds}
         totalTimerSeconds={30}
+        curseHistory={curseHistory}
+        gameStatus={gameStatus}
       />
 
       {/* 6x5 Letter Grid */}
