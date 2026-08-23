@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, CheckCircle2, Flame, Sparkles, Smartphone, HelpCircle, Shuffle, Clapperboard } from 'lucide-react';
+import { Play, CheckCircle2, Flame, Sparkles, Smartphone, Shuffle, Clapperboard } from 'lucide-react';
 import { DailyWordleRecord, UserProfile } from '../types';
 import { sound } from '../services/audio';
 
@@ -139,41 +139,6 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
         </div>
       </div>
 
-      {/* How to Play Clues Guide */}
-      <div style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-md)',
-        padding: '16px',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>
-          <HelpCircle size={16} color="var(--accent-cyan)" />
-          <span>How To Play</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-              W
-            </div>
-            <span><strong>Green</strong>: Letter is in the word and in the correct spot.</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-              I
-            </div>
-            <span><strong>Yellow</strong>: Letter is in the word but in the wrong spot.</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
-              N
-            </div>
-            <span><strong>Gray</strong>: Letter is not in the secret word at all.</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

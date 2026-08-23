@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gamepad2, SpellCheck, BarChart3, User } from 'lucide-react';
+import { Home, BarChart3, User } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { sound } from '../services/audio';
 
@@ -19,21 +19,11 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab }) => {
       <button
         className={`nav-item ${activeTab === 'hub' ? 'active' : ''}`}
         onClick={() => handleTabClick('hub')}
-        aria-label="Arcade Games Hub"
+        aria-label="Home"
       >
         {activeTab === 'hub' && <div className="nav-indicator" />}
-        <span className="nav-icon"><Gamepad2 size={20} /></span>
-        <span>Games</span>
-      </button>
-
-      <button
-        className={`nav-item ${activeTab === 'wordle' ? 'active' : ''}`}
-        onClick={() => handleTabClick('wordle')}
-        aria-label="Daily Wordle"
-      >
-        {activeTab === 'wordle' && <div className="nav-indicator" />}
-        <span className="nav-icon"><SpellCheck size={20} /></span>
-        <span>Wordle</span>
+        <span className="nav-icon"><Home size={20} /></span>
+        <span>Home</span>
       </button>
 
       <button

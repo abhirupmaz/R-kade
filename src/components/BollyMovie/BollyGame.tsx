@@ -11,7 +11,7 @@ import { BollyGrid } from './BollyGrid';
 import { sound } from '../../services/audio';
 import { haptics } from '../../services/haptics';
 import confetti from 'canvas-confetti';
-import { RefreshCw, Trophy, XCircle, Clapperboard, Film } from 'lucide-react';
+import { RefreshCw, Trophy, XCircle, Clapperboard, Film, HelpCircle } from 'lucide-react';
 
 const MAX_GUESSES = 7;
 
@@ -26,6 +26,7 @@ export const BollyGame: React.FC<BollyGameProps> = ({ onShowToast, onImpactShake
   const [guessResults, setGuessResults] = useState<BollyGuessResult[]>([]);
   const [gameStatus, setGameStatus] = useState<GameStatus>('IN_PROGRESS');
   const [showGameOver, setShowGameOver] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const guessedIdsRef = useRef<Set<string>>(new Set());
 
   const initGame = useCallback((targetMode: 'DAILY' | 'PRACTICE') => {
@@ -109,6 +110,14 @@ export const BollyGame: React.FC<BollyGameProps> = ({ onShowToast, onImpactShake
           >
             <span>Practice</span>
           </button>
+          <button
+            className="mode-btn"
+            style={{ padding: '0 8px' }}
+            onClick={() => { sound.playKeyTap(); setShowHelpModal(true); }}
+            aria-label="How to play"
+          >
+            <HelpCircle size={16} />
+          </button>
         </div>
 
         {mode === 'PRACTICE' && (
@@ -146,6 +155,13 @@ export const BollyGame: React.FC<BollyGameProps> = ({ onShowToast, onImpactShake
         guessResults={guessResults}
         maxGuesses={MAX_GUESSES}
       />
+
+      {/* Answer reveal when lost */}
+      {gameStatus === 'LOST' && (
+        <div style={{ textAlign: 'center', marginTop: 12, padding: '12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#f87171', fontWeight: 800, letterSpacing: 1 }}>
+          THE MOVIE WAS: {targetMovie.name.toUpperCase()} ({targetMovie.year})
+        </div>
+      )}
 
       {/* Game Over Modal */}
       {showGameOver && (
@@ -196,6 +212,36 @@ export const BollyGame: React.FC<BollyGameProps> = ({ onShowToast, onImpactShake
                 Play Again
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="modal-overlay" onClick={() => setShowHelpModal(false)} style={{ zIndex: 100 }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, padding: 24 }}>
+            <button className="modal-close-btn" onClick={() => setShowHelpModal(false)}>✕</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, fontWeight: 800, marginBottom: 16, color: 'var(--text-primary)' }}>
+              <HelpCircle size={20} color="#fbbf24" />
+              <span>How To Play Bolly Movie</span>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+              Guess the Bollywood movie in 7 tries. Search for a movie, and the grid will give you clues based on Year, Genre, Director, and Cast.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13, color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: 'rgba(16, 185, 129, 0.18)', border: '1px solid rgba(16, 185, 129, 0.4)', flexShrink: 0 }} />
+                <span><strong>Green</strong>: Exact match for this clue.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)', flexShrink: 0 }} />
+                <span><strong>Yellow</strong>: Partial match. Year is within 3 years, or some Genres/Cast match.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 20, height: 20, borderRadius: 4, background: 'rgba(100, 116, 139, 0.12)', border: '1px solid rgba(100, 116, 139, 0.2)', flexShrink: 0 }} />
+                <span><strong>Gray</strong>: No match for this clue.</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

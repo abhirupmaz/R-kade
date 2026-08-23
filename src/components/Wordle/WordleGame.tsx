@@ -11,7 +11,7 @@ import { Grid } from './Grid';
 import { Keyboard } from './Keyboard';
 import { CurseBanner } from './CurseBanner';
 import { GameOverModal } from './GameOverModal';
-import { Flame, RefreshCw } from 'lucide-react';
+import { Flame, RefreshCw, HelpCircle } from 'lucide-react';
 
 interface WordleGameProps {
   profile: UserProfile;
@@ -27,6 +27,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
   onImpactShake,
 }) => {
   const [mode, setMode] = useState<GameMode>('DAILY');
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Daily puzzle metadata
   const dailyInfo = getDailyWordInfo();
@@ -517,6 +518,17 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           >
             <span>Practice</span>
           </button>
+          <button
+            className="mode-btn"
+            style={{ padding: '0 8px' }}
+            onClick={() => {
+              sound.playKeyTap();
+              setShowHelpModal(true);
+            }}
+            aria-label="How to play"
+          >
+            <HelpCircle size={16} />
+          </button>
         </div>
 
         {mode === 'DAILY' ? (
@@ -566,6 +578,13 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         revealedTileCount={revealedTileCount}
       />
 
+      {/* Answer reveal when lost */}
+      {gameStatus === 'LOST' && (
+        <div style={{ textAlign: 'center', marginTop: 12, padding: '8px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#f87171', fontWeight: 800, letterSpacing: 1 }}>
+          THE WORD WAS: {targetWord.toUpperCase()}
+        </div>
+      )}
+
       {/* On-Screen Virtual Keyboard */}
       <Keyboard
         keyStatuses={keyStatuses}
@@ -588,6 +607,42 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           onPlayAgainPractice={() => initGame('PRACTICE')}
           onShowToast={onShowToast}
         />
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="modal-overlay" onClick={() => setShowHelpModal(false)} style={{ zIndex: 100 }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380, padding: 24 }}>
+            <button className="modal-close-btn" onClick={() => setShowHelpModal(false)}>✕</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, fontWeight: 800, marginBottom: 16, color: 'var(--text-primary)' }}>
+              <HelpCircle size={20} color="var(--accent-cyan)" />
+              <span>How To Play Wordle</span>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+              Guess the secret word in 6 tries. After each guess, the color of the tiles will change to show how close your guess was to the word.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13, color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                  W
+                </div>
+                <span><strong>Green</strong>: Letter is in the word and in the correct spot.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                  I
+                </div>
+                <span><strong>Yellow</strong>: Letter is in the word but in the wrong spot.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                  N
+                </div>
+                <span><strong>Gray</strong>: Letter is not in the secret word at all.</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
