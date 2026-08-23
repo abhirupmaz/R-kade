@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, CheckCircle2, Flame, Sparkles, Smartphone, HelpCircle, Shuffle } from 'lucide-react';
+import { Play, CheckCircle2, Flame, Sparkles, Smartphone, HelpCircle, Shuffle, Clapperboard } from 'lucide-react';
 import { DailyWordleRecord, UserProfile } from '../types';
 import { sound } from '../services/audio';
 
@@ -7,6 +7,7 @@ interface ArcadeHubProps {
   profile: UserProfile;
   todayRecord: DailyWordleRecord | null;
   onLaunchWordle: (mode?: 'DAILY' | 'PRACTICE') => void;
+  onLaunchBolly: () => void;
   onOpenStats: () => void;
   onOpenQrCode: () => void;
 }
@@ -15,6 +16,7 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
   profile,
   todayRecord,
   onLaunchWordle,
+  onLaunchBolly,
   onOpenStats,
   onOpenQrCode,
 }) => {
@@ -83,6 +85,31 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
         <div className="game-card-right">
           <span className="badge-tag badge-active" style={{ background: 'rgba(217, 70, 239, 0.2)', color: '#f472b6', borderColor: 'rgba(217, 70, 239, 0.4)' }}>
             Unlimited
+          </span>
+        </div>
+      </div>
+
+      {/* What's the Bolly Movie? Game Card */}
+      <div
+        className="game-card active-game"
+        onClick={() => {
+          sound.playKeyTap();
+          onLaunchBolly();
+        }}
+        style={{ cursor: 'pointer', borderColor: 'rgba(245, 158, 11, 0.35)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(15, 23, 42, 0.6))' }}
+      >
+        <div className="game-card-left">
+          <div className="game-card-icon" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.12)' }}>
+            <Clapperboard size={22} color="#f59e0b" />
+          </div>
+          <div className="game-card-info">
+            <h4 style={{ color: '#fbbf24' }}>What's the Bolly Movie?</h4>
+            <p>Guess the Bollywood movie in 7 tries using clues</p>
+          </div>
+        </div>
+        <div className="game-card-right">
+          <span className="badge-tag badge-active" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
+            NEW
           </span>
         </div>
       </div>

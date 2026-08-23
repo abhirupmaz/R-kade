@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════════ */
+/*  WHAT'S THE BOLLY MOVIE? – Styles                 */
+/* ═══════════════════════════════════════════════════ */
+
+.bolly-game-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 4px 100px;
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─── Top Bar ─── */
+.bolly-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ─── Title Section ─── */
+.bolly-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 70, 239, 0.08));
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+}
+
+.bolly-title-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.bolly-title-text h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.bolly-title-text p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+/* ═══ Search Bar ═══ */
+.bolly-search-container {
+  position: relative;
+  z-index: 10;
+}
+
+.bolly-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bolly-search-input-wrap:focus-within {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.bolly-search-input-wrap.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.bolly-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.bolly-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.bolly-search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.bolly-search-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.bolly-search-clear:hover {
+  color: var(--text-primary);
+}
+
+/* ─── Search Dropdown ─── */
+.bolly-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+  animation: bolly-dropdown-in 0.18s ease-out;
+}
+
+@keyframes bolly-dropdown-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bolly-search-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-family: var(--font-body);
+}
+
+.bolly-search-option:last-child {
+  border-bottom: none;
+}
+
+.bolly-search-option:hover,
+.bolly-search-option.highlighted {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.bolly-option-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bolly-option-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ═══ Clue Grid ═══ */
+.bolly-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bolly-guess-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  transition: all 0.3s;
+}
+
+.bolly-guess-row.reveal {
+  animation: bolly-row-reveal 0.4s ease-out;
+}
+
+@keyframes bolly-row-reveal {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bolly-guess-row.empty {
+  opacity: 0.3;
+  border-style: dashed;
+}
+
+.bolly-guess-movie-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bolly-guess-number {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.bolly-guess-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+}
+
+.bolly-guess-title.empty-title {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.bolly-clue-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 480px) {
+  .bolly-clue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ─── Individual Clue Cell ─── */
+.bolly-clue-cell {
+  padding: 8px 8px 6px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid transparent;
+  animation: bolly-clue-pop 0.35s ease-out both;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+@keyframes bolly-clue-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.bolly-clue-cell.correct {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.bolly-clue-cell.partial {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.bolly-clue-cell.wrong {
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.2);
+}
+
+.bolly-clue-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.bolly-clue-cell.correct .bolly-clue-label { color: #34d399; }
+.bolly-clue-cell.partial .bolly-clue-label { color: #fbbf24; }
+
+.bolly-clue-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.bolly-clue-cell.correct .bolly-clue-value { color: #34d399; }
+.bolly-clue-cell.partial .bolly-clue-value { color: #fbbf24; }
+.bolly-clue-cell.wrong .bolly-clue-value { color: var(--text-secondary); }
+
+.bolly-clue-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bolly-clue-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.bolly-clue-cell.partial .bolly-clue-sub { color: rgba(251, 191, 36, 0.7); }
+
+/* ═══ Game Over Modal ═══ */
+.bolly-game-over-modal {
+  max-width: 380px;
+}
+
+.bolly-gameover-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.bolly-gameover-header h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 8px 0 4px;
+  color: var(--text-primary);
+}
+
+.bolly-gameover-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.bolly-gameover-details {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bolly-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.bolly-detail-row strong {
+  color: var(--text-primary);
+}
+
+.bolly-overview-text {
+  font-style: italic;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 4px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}

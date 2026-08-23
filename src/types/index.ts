@@ -75,7 +75,7 @@ export interface UserProfile {
   highContrast: boolean;
 }
 
-export type ActiveTab = 'hub' | 'wordle' | 'stats' | 'profile';
+export type ActiveTab = 'hub' | 'wordle' | 'bolly' | 'stats' | 'profile';
 
 export interface ArcadeGameInfo {
   id: string;
@@ -87,4 +87,31 @@ export interface ArcadeGameInfo {
   accentColor: string;
   category: string;
   description: string;
+}
+
+// ─── Bolly Movie Types ───
+
+export interface BollyMovie {
+  id: string;
+  name: string;
+  year: number;
+  genre: string[];
+  director: string;
+  cast: string[];
+  overview: string;
+}
+
+export type BollyClueStatus = 'correct' | 'partial' | 'wrong';
+
+export interface BollyGuessResult {
+  movie: BollyMovie;
+  clues: {
+    year: BollyClueStatus;
+    yearDirection?: 'higher' | 'lower'; // hint: target is higher or lower
+    genre: BollyClueStatus;
+    genreMatches: string[];
+    director: BollyClueStatus;
+    cast: BollyClueStatus;
+    castMatches: string[];
+  };
 }

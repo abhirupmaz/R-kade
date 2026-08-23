@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { Navbar } from './components/Navbar';
 import { ArcadeHub } from './components/ArcadeHub';
 import { WordleGame } from './components/Wordle/WordleGame';
+import { BollyGame } from './components/BollyMovie/BollyGame';
 import { ProfileModal } from './components/Profile/ProfileModal';
 import { StatsModal } from './components/Stats/StatsModal';
 import { QrCodeModal } from './components/QrCodeModal';
@@ -14,6 +15,7 @@ import { Toast, ToastMessage } from './components/Toast';
 
 import './styles/App.css';
 import './styles/Wordle.css';
+import './styles/BollyMovie.css';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('hub');
@@ -85,6 +87,7 @@ export function App() {
             profile={profile}
             todayRecord={todayRecord}
             onLaunchWordle={() => setActiveTab('wordle')}
+            onLaunchBolly={() => setActiveTab('bolly')}
             onOpenStats={() => setShowStatsModal(true)}
             onOpenQrCode={() => setShowQrModal(true)}
           />
@@ -94,6 +97,13 @@ export function App() {
           <WordleGame
             profile={profile}
             onUpdateProfile={handleUpdateProfile}
+            onShowToast={showToast}
+            onImpactShake={triggerImpactShake}
+          />
+        )}
+
+        {activeTab === 'bolly' && (
+          <BollyGame
             onShowToast={showToast}
             onImpactShake={triggerImpactShake}
           />
