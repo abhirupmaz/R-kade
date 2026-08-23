@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, User, Save, RotateCcw } from 'lucide-react';
+import { X, User, Save, RotateCcw, Volume2, Vibrate, BellOff } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { DEFAULT_AVATARS, saveProfile, resetAllStorage } from '../../services/storage';
 import { sound } from '../../services/audio';
-import { haptics } from '../../services/haptics';
 
 interface ProfileModalProps {
   profile: UserProfile;
@@ -54,12 +53,54 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     window.location.reload();
   };
 
+  const handleToggle = (key: 'soundEnabled' | 'hapticsEnabled' | 'showCursePopups') => {
+    sound.playKeyTap();
+    const updated: UserProfile = { ...profile, [key]: !profile[key] };
+    onUpdateProfile(updated);
+    saveProfile(updated);
+  };
+
   const badges = [
     { title: '3-Day Fire', req: 3, icon: '🔥', unlocked: profile.maxStreak >= 3 },
     { title: '7-Day Spark', req: 7, icon: '⚡', unlocked: profile.maxStreak >= 7 },
     { title: '14-Day Crown', req: 14, icon: '👑', unlocked: profile.maxStreak >= 14 },
     { title: '30-Day Legend', req: 30, icon: '💎', unlocked: profile.maxStreak >= 30 },
   ];
+
+  const settingRow = (
+    icon: React.ReactNode,
+    label: string,
+    sublabel: string,
+    checked: boolean,
+    onChange: () => void
+  ) => (
+    <div className="setting-row" style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px 0', borderBottom: '1px solid var(--border-subtle)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ color: 'var(--accent-cyan)', opacity: 0.8 }}>{icon}</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{sublabel}</div>
+        </div>
+      </div>
+      <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, flexShrink: 0 }}>
+        <input type="checkbox" checked={checked} onChange={onChange} style={{ opacity: 0, width: 0, height: 0 }} />
+        <span style={{
+          position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+          background: checked ? 'var(--accent-cyan)' : 'var(--bg-elevated)',
+          borderRadius: 24, transition: '0.3s',
+          boxShadow: checked ? '0 0 8px rgba(0,240,255,0.4)' : 'none'
+        }}>
+          <span style={{
+            position: 'absolute', height: 18, width: 18, left: checked ? 23 : 3, bottom: 3,
+            background: '#fff', borderRadius: '50%', transition: '0.3s'
+          }} />
+        </span>
+      </label>
+    </div>
+  );
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -166,34 +207,38 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </div>
           </div>
 
-          {/* Haptics & Vibration Testing Panel */}
+          {/* Settings Section */}
           <div style={{
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
-            padding: '12px 14px',
+            padding: '4px 14px',
             marginBottom: 18,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                Mobile Haptics & Touch Test
-              </span>
-              <button
-                type="button"
-                className="header-btn"
-                style={{ width: 'auto', padding: '4px 10px', height: 28, fontSize: 11, fontWeight: 700, gap: 4, background: 'rgba(0, 240, 255, 0.15)', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)' }}
-                onClick={() => {
-                  haptics.vibrateError();
-                  onShowToast('Vibration pulse triggered!', '📳');
-                }}
-              >
-                <span>Test Vibration 📳</span>
-              </button>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', padding: '10px 0 4px' }}>
+              Settings
             </div>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-              💡 <strong>Android</strong>: Check that <em>Touch Feedback</em> is enabled in system Sound Settings.<br />
-              💡 <strong>iPhone</strong>: Turn off the physical Silent switch for sub-bass tactile clicks.
-            </p>
+            {settingRow(
+              <Volume2 size={16} />,
+              'Sound Effects',
+              'Keyboard clicks, win / lose sounds',
+              profile.soundEnabled,
+              () => handleToggle('soundEnabled')
+            )}
+            {settingRow(
+              <Vibrate size={16} />,
+              'Haptic Feedback',
+              'Vibration on mobile devices',
+              profile.hapticsEnabled,
+              () => handleToggle('hapticsEnabled')
+            )}
+            {settingRow(
+              <BellOff size={16} />,
+              'Curse Popups',
+              'Fullscreen splash when a curse activates',
+              profile.showCursePopups,
+              () => handleToggle('showCursePopups')
+            )}
           </div>
 
           <button type="submit" className="hero-cta-btn" style={{ marginBottom: 12 }}>

@@ -72,6 +72,8 @@ export interface UserProfile {
   stats: UserStats;
   themeColor: string;
   soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  showCursePopups: boolean;
   highContrast: boolean;
 }
 

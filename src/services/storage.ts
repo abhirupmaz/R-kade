@@ -33,6 +33,8 @@ export const INITIAL_PROFILE: UserProfile = {
   stats: INITIAL_STATS,
   themeColor: '#00f0ff',
   soundEnabled: true,
+  hapticsEnabled: true,
+  showCursePopups: true,
   highContrast: false,
 };
 

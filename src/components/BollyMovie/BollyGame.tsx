@@ -85,13 +85,16 @@ export const BollyGame: React.FC<BollyGameProps> = ({ onShowToast, onImpactShake
       // Wrong guess feedback
       sound.playError();
       haptics.vibrateWrongGuess();
-      onImpactShake?.();
-      onShowToast(
-        `Wrong! ${MAX_GUESSES - newResults.length} guess${MAX_GUESSES - newResults.length === 1 ? '' : 'es'} left`,
-        '🎬'
-      );
+      
+      const guessesLeft = MAX_GUESSES - newResults.length;
+      if (guessesLeft <= 3) {
+        onShowToast(
+          `Wrong! ${guessesLeft} guess${guessesLeft === 1 ? '' : 'es'} left`,
+          '🎬'
+        );
+      }
     }
-  }, [gameStatus, targetMovie, guessResults, onShowToast, onImpactShake]);
+  }, [gameStatus, targetMovie, guessResults, onShowToast]);
 
   return (
     <div className="bolly-game-container">

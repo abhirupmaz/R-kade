@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Flame, Smartphone } from 'lucide-react';
+import { Volume2, VolumeX, Flame } from 'lucide-react';
 import { UserProfile } from '../types';
 import { sound } from '../services/audio';
 
@@ -7,16 +7,14 @@ interface HeaderProps {
   profile: UserProfile;
   onOpenProfile: () => void;
   onOpenStats: () => void;
-  onOpenQrCode: () => void;
   onToggleSound: () => void;
-  onSelectTab: (tab: 'hub' | 'wordle' | 'stats' | 'profile') => void;
+  onSelectTab: (tab: 'hub' | 'wordle' | 'stats' | 'profile' | 'bolly') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   profile,
   onOpenProfile,
   onOpenStats,
-  onOpenQrCode,
   onToggleSound,
   onSelectTab,
 }) => {
@@ -52,20 +50,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Flame className="streak-flame" size={16} color="#f59e0b" fill="#f59e0b" />
           <span>{profile.streak}</span>
-        </button>
-
-        {/* Play on Phone QR Code button */}
-        <button
-          className="header-btn"
-          onClick={() => {
-            sound.playKeyTap();
-            onOpenQrCode();
-          }}
-          title="Play on Phone (QR Code)"
-          aria-label="Play on Phone"
-          style={{ borderColor: 'rgba(0, 240, 255, 0.4)' }}
-        >
-          <Smartphone size={17} color="var(--accent-cyan)" />
         </button>
 
         {/* Audio Toggle */}

@@ -3,6 +3,7 @@ import { ActiveTab, UserProfile, DailyWordleRecord } from './types';
 import { getStoredProfile, saveProfile, getDailyRecord } from './services/storage';
 import { getDailyWordInfo } from './services/dictionary';
 import { sound } from './services/audio';
+import { haptics } from './services/haptics';
 import { Header } from './components/Header';
 import { Navbar } from './components/Navbar';
 import { ArcadeHub } from './components/ArcadeHub';
@@ -10,7 +11,6 @@ import { WordleGame } from './components/Wordle/WordleGame';
 import { BollyGame } from './components/BollyMovie/BollyGame';
 import { ProfileModal } from './components/Profile/ProfileModal';
 import { StatsModal } from './components/Stats/StatsModal';
-import { QrCodeModal } from './components/QrCodeModal';
 import { Toast, ToastMessage } from './components/Toast';
 
 import './styles/App.css';
@@ -19,17 +19,18 @@ import './styles/BollyMovie.css';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('hub');
+  const [wordleMode, setWordleMode] = useState<'DAILY' | 'PRACTICE'>('DAILY');
   const [profile, setProfile] = useState<UserProfile>(() => getStoredProfile());
   const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
   const [showStatsModal, setShowStatsModal] = useState<boolean>(false);
-  const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [isImpactShaking, setIsImpactShaking] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Sync sound engine enabled flag with profile
+  // Sync sound and haptics engine enabled flags with profile
   useEffect(() => {
     sound.setEnabled(profile.soundEnabled);
-  }, [profile.soundEnabled]);
+    haptics.setEnabled(profile.hapticsEnabled);
+  }, [profile.soundEnabled, profile.hapticsEnabled]);
 
   const triggerImpactShake = () => {
     setIsImpactShaking(true);
@@ -75,7 +76,6 @@ export function App() {
         profile={profile}
         onOpenProfile={() => setShowProfileModal(true)}
         onOpenStats={() => setShowStatsModal(true)}
-        onOpenQrCode={() => setShowQrModal(true)}
         onToggleSound={handleToggleSound}
         onSelectTab={setActiveTab}
       />
@@ -86,15 +86,18 @@ export function App() {
           <ArcadeHub
             profile={profile}
             todayRecord={todayRecord}
-            onLaunchWordle={() => setActiveTab('wordle')}
+            onLaunchWordle={(mode) => {
+              setWordleMode(mode || 'DAILY');
+              setActiveTab('wordle');
+            }}
             onLaunchBolly={() => setActiveTab('bolly')}
             onOpenStats={() => setShowStatsModal(true)}
-            onOpenQrCode={() => setShowQrModal(true)}
           />
         )}
 
         {activeTab === 'wordle' && (
           <WordleGame
+            initialMode={wordleMode}
             profile={profile}
             onUpdateProfile={handleUpdateProfile}
             onShowToast={showToast}
@@ -145,14 +148,6 @@ export function App() {
         <StatsModal
           profile={profile}
           onClose={() => setShowStatsModal(false)}
-        />
-      )}
-
-      {/* QR Code Modal for Mobile Phone Testing */}
-      {showQrModal && (
-        <QrCodeModal
-          onClose={() => setShowQrModal(false)}
-          onShowToast={showToast}
         />
       )}
 

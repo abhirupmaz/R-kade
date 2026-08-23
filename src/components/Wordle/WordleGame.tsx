@@ -14,6 +14,7 @@ import { GameOverModal } from './GameOverModal';
 import { Flame, RefreshCw, HelpCircle } from 'lucide-react';
 
 interface WordleGameProps {
+  initialMode: GameMode;
   profile: UserProfile;
   onUpdateProfile: (profile: UserProfile) => void;
   onShowToast: (message: string, icon?: string) => void;
@@ -21,12 +22,13 @@ interface WordleGameProps {
 }
 
 export const WordleGame: React.FC<WordleGameProps> = ({
+  initialMode,
   profile,
   onUpdateProfile,
   onShowToast,
   onImpactShake,
 }) => {
-  const [mode, setMode] = useState<GameMode>('DAILY');
+  const [mode, setMode] = useState<GameMode>(initialMode);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   // Daily puzzle metadata
@@ -43,6 +45,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
   
   // Curse state
   const [activeCurse, setActiveCurse] = useState<ActiveCurseState | null>(null);
+  const [curseSplash, setCurseSplash] = useState<ActiveCurseState | null>(null);
   const [curseHistory, setCurseHistory] = useState<CurseHistoryEntry[]>([]);
   const [timerSeconds, setTimerSeconds] = useState<number | undefined>(undefined);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,6 +109,11 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       if (notify) {
         sound.playCurseTrigger();
         onShowToast(`Curse Awakened: ${nextCurse.name}`, nextCurse.icon);
+        
+        if (profile.showCursePopups) {
+          setCurseSplash(nextCurse);
+          setTimeout(() => setCurseSplash(null), 2200);
+        }
       }
 
       if (nextCurse.id === 'OVERLOAD_TIMER' && nextCurse.timeLimit) {
@@ -191,10 +199,10 @@ export const WordleGame: React.FC<WordleGameProps> = ({
 
   // Run initGame once on initial mount
   useEffect(() => {
-    initGame('DAILY');
+    initGame(initialMode);
     return () => clearCurseTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialMode]);
 
   // Handle Letter Input
   const handleChar = useCallback((char: string) => {
@@ -616,7 +624,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
             <button className="modal-close-btn" onClick={() => setShowHelpModal(false)}>✕</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, fontWeight: 800, marginBottom: 16, color: 'var(--text-primary)' }}>
               <HelpCircle size={20} color="var(--accent-cyan)" />
-              <span>How To Play Wordle</span>
+              <span>How To Play Cursed Wordle</span>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
               Guess the secret word in 6 tries. After each guess, the color of the tiles will change to show how close your guess was to the word.
@@ -641,6 +649,26 @@ export const WordleGame: React.FC<WordleGameProps> = ({
                 <span><strong>Gray</strong>: Letter is not in the secret word at all.</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Brief Curse Splash Overlay */}
+      {curseSplash && profile.showCursePopups && (
+        <div className="modal-overlay" style={{ zIndex: 110, pointerEvents: 'none', background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(2px)' }}>
+          <div style={{ 
+            animation: 'scale-up-center 0.4s cubic-bezier(0.390, 0.575, 0.565, 1.000) both',
+            background: 'var(--bg-surface)', 
+            border: '2px solid #ef4444', 
+            padding: '24px 32px', 
+            borderRadius: '16px', 
+            textAlign: 'center',
+            boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)'
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>{curseSplash.icon}</div>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#ef4444', letterSpacing: 1, textTransform: 'uppercase' }}>Curse Awakened!</h2>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8 }}>{curseSplash.name}</div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>{curseSplash.description}</div>
           </div>
         </div>
       )}

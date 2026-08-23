@@ -1,7 +1,8 @@
-/* Mobile App Shell */
+/* App Shell */
 .app-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 1000px;
+  margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -23,6 +24,32 @@
   20%, 80% { transform: translate3d(3px, -2px, 0); }
   30%, 50%, 70% { transform: translate3d(-4px, 2px, 0); }
   40%, 60% { transform: translate3d(4px, -1px, 0); }
+}
+
+@keyframes scale-up-center {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Desktop responsive: widen grid layout for bigger screens */
+@media (min-width: 720px) {
+  .hub-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .hub-hero {
+    grid-column: 1 / -1;
+  }
+
+  .wordle-game-container,
+  .bolly-game-container {
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
 }
 
 /* =========================================

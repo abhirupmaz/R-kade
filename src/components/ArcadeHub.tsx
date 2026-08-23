@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, CheckCircle2, Flame, Sparkles, Smartphone, Shuffle, Clapperboard } from 'lucide-react';
+import { Play, CheckCircle2, Flame, Sparkles, Shuffle, Clapperboard } from 'lucide-react';
 import { DailyWordleRecord, UserProfile } from '../types';
 import { sound } from '../services/audio';
 
@@ -9,7 +9,6 @@ interface ArcadeHubProps {
   onLaunchWordle: (mode?: 'DAILY' | 'PRACTICE') => void;
   onLaunchBolly: () => void;
   onOpenStats: () => void;
-  onOpenQrCode: () => void;
 }
 
 export const ArcadeHub: React.FC<ArcadeHubProps> = ({
@@ -18,7 +17,6 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
   onLaunchWordle,
   onLaunchBolly,
   onOpenStats,
-  onOpenQrCode,
 }) => {
   const isTodayCompleted = todayRecord && (todayRecord.status === 'WON' || todayRecord.status === 'LOST');
 
@@ -38,9 +36,9 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
           </div>
         </div>
 
-        <h2 className="hero-title">Word-Kade Wordle</h2>
+        <h2 className="hero-title">Cursed Wordle</h2>
         <p className="hero-desc">
-          5 blank letters. 6 attempts. Clues update in real time with duplicate frequency checks and mobile haptic feedback.
+          5 blank letters. 6 attempts. After your first guess, the Arcade Curses awaken — each forcing you to adapt.
         </p>
 
         <button 
@@ -110,31 +108,6 @@ export const ArcadeHub: React.FC<ArcadeHubProps> = ({
         <div className="game-card-right">
           <span className="badge-tag badge-active" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.4)' }}>
             NEW
-          </span>
-        </div>
-      </div>
-
-      {/* Test on Phone / Mobile QR Card */}
-      <div
-        className="game-card active-game"
-        onClick={() => {
-          sound.playKeyTap();
-          onOpenQrCode();
-        }}
-        style={{ cursor: 'pointer', borderColor: 'rgba(0, 240, 255, 0.4)', background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(15, 23, 42, 0.6))' }}
-      >
-        <div className="game-card-left">
-          <div className="game-card-icon" style={{ borderColor: 'var(--accent-cyan)', background: 'rgba(0, 240, 255, 0.15)' }}>
-            <Smartphone size={22} color="var(--accent-cyan)" />
-          </div>
-          <div className="game-card-info">
-            <h4 style={{ color: 'var(--accent-cyan)' }}>Test on Your Phone</h4>
-            <p>Scan QR code or connect over Wi-Fi for mobile haptics</p>
-          </div>
-        </div>
-        <div className="game-card-right">
-          <span className="badge-tag badge-active">
-            Scan QR
           </span>
         </div>
       </div>

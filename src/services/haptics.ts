@@ -6,10 +6,15 @@ class HapticsEngine {
   private iosTriggerEl: HTMLInputElement | null = null;
   private audioCtx: AudioContext | null = null;
   private compressor: DynamicsCompressorNode | null = null;
+  private enabled: boolean = true;
 
   constructor() {
     this.initIosTrigger();
     this.attachUnlockListeners();
+  }
+
+  public setEnabled(enabled: boolean) {
+    this.enabled = enabled;
   }
 
   private attachUnlockListeners() {
@@ -74,6 +79,7 @@ class HapticsEngine {
    * Generates a sub-bass physical acoustic vibration impulse through the iPhone/Android speaker driver
    */
   private playAcousticHapticThud(startFreq: number = 120, endFreq: number = 28, duration: number = 0.07, gainVal: number = 0.95) {
+    if (!this.enabled) return;
     try {
       this.initAudio();
       if (!this.audioCtx) return;
@@ -108,6 +114,7 @@ class HapticsEngine {
    * Trigger iOS Taptic Engine through input change
    */
   private triggerIosHaptic() {
+    if (!this.enabled) return;
     if (this.iosTriggerEl) {
       this.iosTriggerEl.checked = !this.iosTriggerEl.checked;
     }
@@ -117,6 +124,8 @@ class HapticsEngine {
    * Subtle tactile tick for key taps
    */
   public vibrateKey() {
+    if (!this.enabled) return;
+
     // 1. Android Vibration API
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -137,6 +146,8 @@ class HapticsEngine {
    * Rapid double-buzz for invalid words / errors
    */
   public vibrateError() {
+    if (!this.enabled) return;
+
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([140, 60, 180]);
@@ -157,6 +168,8 @@ class HapticsEngine {
    * Tactile shake pulse for incorrect evaluated guess
    */
   public vibrateWrongGuess() {
+    if (!this.enabled) return;
+
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([120, 60, 160]);
@@ -177,6 +190,8 @@ class HapticsEngine {
    * Distinct haptic pulse for revealing a single letter tile
    */
   public vibrateTileReveal(status: string) {
+    if (!this.enabled) return;
+
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         if (status === 'correct') {
@@ -201,6 +216,8 @@ class HapticsEngine {
    * Triumphant short pulses for victory
    */
   public vibrateWin() {
+    if (!this.enabled) return;
+
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([80, 40, 80, 40, 220]);
@@ -217,6 +234,8 @@ class HapticsEngine {
    * Heavy drop buzz for game loss
    */
   public vibrateLoss() {
+    if (!this.enabled) return;
+
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([200, 90, 300]);
