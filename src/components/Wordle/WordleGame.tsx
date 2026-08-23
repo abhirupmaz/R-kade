@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import confetti from 'canvas-confetti';
-import { GameMode, LetterStatus, EvaluatedLetter, GameStatus, UserProfile } from '../../types';
+import { GameMode, LetterStatus, EvaluatedLetter, GameStatus, UserProfile, ActiveCurseState } from '../../types';
 import { getDailyWordInfo, getRandomTargetWord, isValidWord, evaluateGuess } from '../../services/dictionary';
 import { getDailyRecord, saveDailyRecord, recordDailyGameResult, recordPracticeGameResult } from '../../services/storage';
+import { getCurseForAttempt, validateCurse } from '../../services/curses';
 import { sound } from '../../services/audio';
 import { haptics } from '../../services/haptics';
 import { Grid } from './Grid';
 import { Keyboard } from './Keyboard';
+import { CurseBanner } from './CurseBanner';
 import { GameOverModal } from './GameOverModal';
 import { Flame, RefreshCw } from 'lucide-react';
 
@@ -37,6 +39,11 @@ export const WordleGame: React.FC<WordleGameProps> = ({
   const [gameStatus, setGameStatus] = useState<GameStatus>('IN_PROGRESS');
   const [keyStatuses, setKeyStatuses] = useState<{ [key: string]: LetterStatus }>({});
   
+  // Curse state
+  const [activeCurse, setActiveCurse] = useState<ActiveCurseState | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState<number | undefined>(undefined);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Animation states
   const [isShaking, setIsShaking] = useState<boolean>(false);
   const [shakingRowIndex, setShakingRowIndex] = useState<number>(-1);
@@ -49,8 +56,53 @@ export const WordleGame: React.FC<WordleGameProps> = ({
 
   const isProcessingRef = useRef(false);
 
+  // Clear timer helper
+  const clearCurseTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setTimerSeconds(undefined);
+  }, []);
+
+  // Compute active curse for a specific attempt index
+  const applyCurseForAttempt = useCallback((
+    attemptIdx: number,
+    prevGuessWord: string,
+    targetMode: GameMode,
+    dKey: string
+  ) => {
+    clearCurseTimer();
+
+    if (attemptIdx === 0) {
+      setActiveCurse(null);
+      return;
+    }
+
+    if (attemptIdx >= 5) {
+      // Attempt 6 (Final Stand)
+      setActiveCurse(null);
+      sound.playCurseLifted();
+      onShowToast('Final Stand — The Curse Lifts!', '🛡️');
+      return;
+    }
+
+    const nextCurse = getCurseForAttempt(attemptIdx, dKey, prevGuessWord, targetMode);
+    setActiveCurse(nextCurse);
+
+    if (nextCurse) {
+      sound.playCurseTrigger();
+      onShowToast(`Curse Awakened: ${nextCurse.name}`, nextCurse.icon);
+
+      if (nextCurse.id === 'OVERLOAD_TIMER' && nextCurse.timeLimit) {
+        setTimerSeconds(nextCurse.timeLimit);
+      }
+    }
+  }, [clearCurseTimer, onShowToast]);
+
   // Initialize or switch modes
   const initGame = useCallback((targetMode: GameMode) => {
+    clearCurseTimer();
     setMode(targetMode);
     setCurrentGuess('');
     setIsShaking(false);
@@ -95,13 +147,19 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           if (existing.status === 'WON') {
             setWonRowIndex(existing.guesses.length - 1);
           }
+          setActiveCurse(null);
           setShowGameOverModal(true);
+        } else {
+          // In progress daily: restore active curse for the current attempt
+          const lastGuess = existing.guesses[existing.guesses.length - 1] || '';
+          applyCurseForAttempt(existing.guesses.length, lastGuess, 'DAILY', info.dateKey);
         }
       } else {
         setGuesses([]);
         setEvaluations([]);
         setGameStatus('IN_PROGRESS');
         setKeyStatuses({});
+        setActiveCurse(null);
       }
     } else {
       // Practice Mode: generate fresh random word
@@ -112,12 +170,14 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       setEvaluations([]);
       setGameStatus('IN_PROGRESS');
       setKeyStatuses({});
+      setActiveCurse(null);
     }
-  }, []);
+  }, [clearCurseTimer, applyCurseForAttempt]);
 
   useEffect(() => {
     initGame('DAILY');
-  }, [initGame]);
+    return () => clearCurseTimer();
+  }, [initGame, clearCurseTimer]);
 
   // Handle Letter Input
   const handleChar = useCallback((char: string) => {
@@ -135,11 +195,13 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     setCurrentGuess((prev) => prev.slice(0, -1));
   }, [gameStatus]);
 
-  // Handle Guess Submission with 1-by-1 tile color reveal
-  const handleEnter = useCallback(() => {
+  // Handle Guess Submission with 1-by-1 tile color reveal & Curse validation
+  const handleEnter = useCallback((forcedGuess?: string) => {
     if (gameStatus !== 'IN_PROGRESS' || isProcessingRef.current) return;
 
-    if (currentGuess.length < 5) {
+    const guessToSubmit = forcedGuess || currentGuess;
+
+    if (guessToSubmit.length < 5) {
       sound.playError();
       haptics.vibrateError();
       setIsShaking(true);
@@ -149,7 +211,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       return;
     }
 
-    if (!isValidWord(currentGuess)) {
+    if (!isValidWord(guessToSubmit)) {
       sound.playError();
       haptics.vibrateError();
       setIsShaking(true);
@@ -159,11 +221,43 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       return;
     }
 
+    // Validate Active Curse Requirement
+    const prevGuess = guesses.length > 0 ? guesses[guesses.length - 1] : '';
+    const curseCheck = validateCurse(activeCurse, guessToSubmit, prevGuess);
+
+    if (!curseCheck.valid && !forcedGuess) {
+      sound.playCurseViolation();
+      haptics.vibrateError();
+      setIsShaking(true);
+      onImpactShake?.();
+      onShowToast(`Curse Blocked: ${curseCheck.reason}`, activeCurse?.icon || '🔮');
+      setTimeout(() => setIsShaking(false), 500);
+      return;
+    }
+
+    // Stop timer while processing evaluation
+    clearCurseTimer();
+
     // Process evaluation
     isProcessingRef.current = true;
-    const submittedGuess = currentGuess;
+    const submittedGuess = guessToSubmit;
     const rowIndex = guesses.length;
     const evalResult = evaluateGuess(submittedGuess, targetWord);
+
+    // Apply Glitch Mirage deception if active
+    if (activeCurse?.id === 'GLITCH_MIRAGE' && activeCurse.deceptiveIndex !== undefined) {
+      const dIdx = activeCurse.deceptiveIndex;
+      if (evalResult.letters[dIdx]) {
+        const orig = evalResult.letters[dIdx].status;
+        evalResult.letters[dIdx].isDeceptive = true;
+        // Invert clue appearance
+        if (orig === 'absent') {
+          evalResult.letters[dIdx].status = 'present';
+        } else if (orig === 'present') {
+          evalResult.letters[dIdx].status = 'absent';
+        }
+      }
+    }
 
     // Initialize reveal state
     setRevealingRowIndex(rowIndex);
@@ -175,12 +269,11 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     // Stagger tile flip & color reveals ONE BY ONE (every 300ms)
     evalResult.letters.forEach((item, idx) => {
       setTimeout(() => {
-        // Reveal color for this specific tile
         setRevealedTileCount(idx + 1);
         sound.playTileFlip(idx, item.status as 'correct' | 'present' | 'absent');
         haptics.vibrateTileReveal(item.status);
 
-        // Update keyboard letter status in real-time as each tile turns color
+        // Update keyboard letter status in real-time
         setKeyStatuses((prevKeys) => {
           const updated = { ...prevKeys };
           const current = updated[item.letter];
@@ -198,7 +291,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       }, idx * 300 + 160);
     });
 
-    // After all 5 tiles have finished flipping and turning color (~1800ms)
+    // After all 5 tiles have finished flipping (~1800ms)
     const totalRevealTime = 5 * 300 + 250;
 
     setTimeout(() => {
@@ -218,6 +311,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       if (isWon) {
         setGameStatus('WON');
         setWonRowIndex(rowIndex);
+        setActiveCurse(null);
         sound.playWin();
         haptics.vibrateWin();
 
@@ -250,7 +344,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
 
         setTimeout(() => setShowGameOverModal(true), 1200);
       } else {
-        // Wrong guess feedback: shake on the newly submitted evaluated row + wrong guess vibration
+        // Wrong guess feedback: shake on the newly submitted evaluated row
         setShakingRowIndex(rowIndex);
         haptics.vibrateWrongGuess();
         onImpactShake?.();
@@ -258,6 +352,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
 
         if (isLost) {
           setGameStatus('LOST');
+          setActiveCurse(null);
           sound.playLoss();
           haptics.vibrateLoss();
 
@@ -281,17 +376,22 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           }
 
           setTimeout(() => setShowGameOverModal(true), 1000);
-        } else if (mode === 'DAILY') {
-          // Save in-progress state
-          saveDailyRecord({
-            dateKey: dailyInfo.dateKey,
-            dayNumber: dailyInfo.dayNumber,
-            word: targetWord,
-            guesses: newGuesses,
-            evaluations: newEvaluations,
-            status: 'IN_PROGRESS',
-            attemptsUsed: newGuesses.length,
-          });
+        } else {
+          // Game continues: update daily record & awaken next curse!
+          if (mode === 'DAILY') {
+            saveDailyRecord({
+              dateKey: dailyInfo.dateKey,
+              dayNumber: dailyInfo.dayNumber,
+              word: targetWord,
+              guesses: newGuesses,
+              evaluations: newEvaluations,
+              status: 'IN_PROGRESS',
+              attemptsUsed: newGuesses.length,
+            });
+          }
+
+          // Advance Curse for Next Turn
+          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey);
         }
       }
 
@@ -303,24 +403,61 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     guesses,
     evaluations,
     targetWord,
+    activeCurse,
     mode,
     dailyInfo,
-    onUpdateProfile,
     onShowToast,
+    onImpactShake,
+    onUpdateProfile,
+    clearCurseTimer,
+    applyCurseForAttempt,
   ]);
+
+  // Overload Timer Countdown Tick
+  useEffect(() => {
+    if (activeCurse?.id === 'OVERLOAD_TIMER' && timerSeconds !== undefined && gameStatus === 'IN_PROGRESS') {
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSeconds((prev) => {
+          if (prev === undefined || prev <= 1) {
+            clearInterval(timerIntervalRef.current!);
+            // Timer expired: auto-repeat previous guess and waste turn!
+            const prevWord = guesses[guesses.length - 1];
+            if (prevWord) {
+              sound.playCurseViolation();
+              onShowToast('⏱️ TIME EXPIRED! Previous word repeated!', '⚠️');
+              handleEnter(prevWord);
+            }
+            return 0;
+          }
+
+          if (prev <= 6) {
+            sound.playTimerTick();
+          }
+
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+      };
+    }
+  }, [activeCurse, timerSeconds, gameStatus, guesses, handleEnter, onShowToast]);
 
   // Physical Keyboard Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (showGameOverModal) return;
+
       if (e.key === 'Enter') {
         handleEnter();
       } else if (e.key === 'Backspace') {
-        sound.playKeyDelete();
         handleDelete();
       } else if (/^[a-zA-Z]$/.test(e.key)) {
-        sound.playKeyTap();
-        handleChar(e.key.toUpperCase());
+        handleChar(e.key);
       }
     };
 
@@ -328,35 +465,39 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleEnter, handleDelete, handleChar, showGameOverModal]);
 
+  // Compute live validation feedback for current typed letters
+  const prevSubmittedGuess = guesses.length > 0 ? guesses[guesses.length - 1] : '';
+  const currentValidation = validateCurse(activeCurse, currentGuess, prevSubmittedGuess);
+
   return (
-    <div className="wordle-container">
-      {/* Wordle Top Mode Selector */}
+    <div className="wordle-game-container">
+      {/* Top Bar / Mode Indicator */}
       <div className="wordle-top-bar">
-        <div className="mode-pills">
+        <div className="mode-toggle-group">
           <button
-            className={`mode-pill-btn ${mode === 'DAILY' ? 'active' : ''}`}
+            className={`mode-btn ${mode === 'DAILY' ? 'active' : ''}`}
             onClick={() => {
               sound.playKeyTap();
               initGame('DAILY');
             }}
           >
-            Daily #{dailyInfo.dayNumber}
+            <span>Daily #{dayNumber}</span>
           </button>
           <button
-            className={`mode-pill-btn ${mode === 'PRACTICE' ? 'active' : ''}`}
+            className={`mode-btn ${mode === 'PRACTICE' ? 'active' : ''}`}
             onClick={() => {
               sound.playKeyTap();
               initGame('PRACTICE');
             }}
           >
-            Practice
+            <span>Practice</span>
           </button>
         </div>
 
         {mode === 'DAILY' ? (
-          <div className="daily-timer-badge">
-            <Flame size={14} color="#f59e0b" fill="#f59e0b" />
-            <span>Streak: {profile.streak}</span>
+          <div className="streak-indicator">
+            <Flame size={13} className="streak-flame" />
+            <span>{profile.streak}d Streak</span>
           </div>
         ) : (
           <button
@@ -373,6 +514,15 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           </button>
         )}
       </div>
+
+      {/* Arcade Curse Banner */}
+      <CurseBanner
+        attemptIndex={guesses.length}
+        activeCurse={activeCurse}
+        validation={currentValidation}
+        timerSeconds={timerSeconds}
+        totalTimerSeconds={30}
+      />
 
       {/* 6x5 Letter Grid */}
       <Grid
@@ -394,11 +544,11 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         keyStatuses={keyStatuses}
         onChar={handleChar}
         onDelete={handleDelete}
-        onEnter={handleEnter}
+        onEnter={() => handleEnter()}
         disabled={gameStatus !== 'IN_PROGRESS'}
       />
 
-      {/* Game Over / Results Modal */}
+      {/* Game Over Modal */}
       {showGameOverModal && (
         <GameOverModal
           status={gameStatus === 'WON' ? 'WON' : 'LOST'}

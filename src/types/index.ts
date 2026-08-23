@@ -7,11 +7,35 @@ export type GameMode = 'DAILY' | 'PRACTICE';
 export interface EvaluatedLetter {
   letter: string;
   status: LetterStatus;
+  isDeceptive?: boolean; // For Glitch Mirage curse
 }
 
 export interface GuessEvaluation {
   letters: EvaluatedLetter[];
   isCorrect: boolean;
+}
+
+export type CurseId =
+  | 'ECHO_ONE'
+  | 'ECHO_TWO'
+  | 'ALPHA_LINK'
+  | 'OUROBOROS'
+  | 'GLITCH_MIRAGE'
+  | 'OVERLOAD_TIMER'
+  | 'VOWEL_BAN'
+  | 'ANCHOR_SLOT';
+
+export interface ActiveCurseState {
+  id: CurseId;
+  name: string;
+  icon: string;
+  shortRule: string;
+  description: string;
+  flavor: string;
+  bannedLetter?: string;
+  timeLimit?: number; // In seconds (e.g. 30)
+  timeRemaining?: number;
+  deceptiveIndex?: number;
 }
 
 export interface DailyWordleRecord {
