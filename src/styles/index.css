@@ -1,0 +1,120 @@
+:root {
+  /* Color Palette - Neo Arcade Cyberpunk */
+  --bg-main: #0a0e17;
+  --bg-card: rgba(18, 26, 43, 0.75);
+  --bg-card-solid: #121a2b;
+  --bg-surface: #162035;
+  --bg-elevated: #1e2c47;
+  
+  /* Primary & Neon Accents */
+  --accent-cyan: #00f0ff;
+  --accent-cyan-glow: rgba(0, 240, 255, 0.35);
+  --accent-magenta: #f43f5e;
+  --accent-purple: #d946ef;
+  --accent-purple-glow: rgba(217, 70, 239, 0.35);
+  --accent-gold: #f59e0b;
+  --accent-gold-glow: rgba(245, 158, 11, 0.4);
+  
+  /* Game Status Colors */
+  --color-correct: #10b981;
+  --color-correct-glow: rgba(16, 185, 129, 0.4);
+  --color-present: #f59e0b;
+  --color-present-glow: rgba(245, 158, 11, 0.4);
+  --color-absent: #334155;
+  --color-empty-border: #2a374f;
+  --color-active-border: #00f0ff;
+
+  /* Typography Colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0a0e17;
+
+  /* Borders & Glassmorphism */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(0, 240, 255, 0.6);
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-backdrop: blur(16px);
+  
+  /* Radii & Shadows */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  
+  --shadow-neon: 0 0 20px var(--accent-cyan-glow);
+  --shadow-elevated: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+
+  /* Fonts */
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-sans);
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background: radial-gradient(circle at 50% 0%, #151e36 0%, #0a0e17 70%);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+button {
+  font-family: var(--font-sans);
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+input {
+  font-family: var(--font-sans);
+  outline: none;
+}
