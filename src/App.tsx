@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ActiveTab, UserProfile, DailyWordleRecord } from './types';
 import { getStoredProfile, saveProfile, getDailyRecord } from './services/storage';
 import { getDailyWordInfo } from './services/dictionary';
@@ -38,8 +38,8 @@ export function App() {
   const dailyInfo = getDailyWordInfo();
   const todayRecord: DailyWordleRecord | null = getDailyRecord(dailyInfo.dateKey);
 
-  // Toast helper
-  const showToast = (text: string, icon?: string) => {
+  // Toast helper (memoized)
+  const showToast = useCallback((text: string, icon?: string) => {
     const id = `${Date.now()}_${Math.random()}`;
     const newToast: ToastMessage = { id, text, icon };
     setToasts((prev) => [...prev, newToast]);
@@ -47,7 +47,7 @@ export function App() {
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 2200);
-  };
+  }, []);
 
   const handleToggleSound = () => {
     const updated: UserProfile = {

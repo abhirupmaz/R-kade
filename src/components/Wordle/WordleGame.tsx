@@ -70,7 +70,8 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     attemptIdx: number,
     prevGuessWord: string,
     targetMode: GameMode,
-    dKey: string
+    dKey: string,
+    notify: boolean = false
   ) => {
     clearCurseTimer();
 
@@ -82,8 +83,10 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     if (attemptIdx >= 5) {
       // Attempt 6 (Final Stand)
       setActiveCurse(null);
-      sound.playCurseLifted();
-      onShowToast('Final Stand — The Curse Lifts!', '🛡️');
+      if (notify) {
+        sound.playCurseLifted();
+        onShowToast('Final Stand — The Curse Lifts!', '🛡️');
+      }
       return;
     }
 
@@ -91,8 +94,10 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     setActiveCurse(nextCurse);
 
     if (nextCurse) {
-      sound.playCurseTrigger();
-      onShowToast(`Curse Awakened: ${nextCurse.name}`, nextCurse.icon);
+      if (notify) {
+        sound.playCurseTrigger();
+        onShowToast(`Curse Awakened: ${nextCurse.name}`, nextCurse.icon);
+      }
 
       if (nextCurse.id === 'OVERLOAD_TIMER' && nextCurse.timeLimit) {
         setTimerSeconds(nextCurse.timeLimit);
@@ -150,9 +155,9 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           setActiveCurse(null);
           setShowGameOverModal(true);
         } else {
-          // In progress daily: restore active curse for the current attempt
+          // In progress daily: restore active curse silently
           const lastGuess = existing.guesses[existing.guesses.length - 1] || '';
-          applyCurseForAttempt(existing.guesses.length, lastGuess, 'DAILY', info.dateKey);
+          applyCurseForAttempt(existing.guesses.length, lastGuess, 'DAILY', info.dateKey, false);
         }
       } else {
         setGuesses([]);
@@ -174,10 +179,12 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     }
   }, [clearCurseTimer, applyCurseForAttempt]);
 
+  // Run initGame once on initial mount
   useEffect(() => {
     initGame('DAILY');
     return () => clearCurseTimer();
-  }, [initGame, clearCurseTimer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle Letter Input
   const handleChar = useCallback((char: string) => {
@@ -391,7 +398,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           }
 
           // Advance Curse for Next Turn
-          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey);
+          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey, true);
         }
       }
 
