@@ -32,6 +32,22 @@ export function App() {
     haptics.setEnabled(profile.hapticsEnabled);
   }, [profile.soundEnabled, profile.hapticsEnabled]);
 
+  // Handle browser back button: always return to Hub instead of leaving the app
+  useEffect(() => {
+    if (activeTab !== 'hub') {
+      // Push a synthetic state so the browser has somewhere to "go back" to
+      window.history.pushState({ tab: activeTab }, '');
+    }
+
+    const onPopState = () => {
+      // User pressed back — send them home
+      setActiveTab('hub');
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [activeTab]);
+
   const triggerImpactShake = () => {
     setIsImpactShaking(true);
     setTimeout(() => setIsImpactShaking(false), 420);

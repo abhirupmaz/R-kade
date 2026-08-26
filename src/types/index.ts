@@ -31,9 +31,10 @@ export interface ActiveCurseState {
   icon: string;
   shortRule: string;
   description: string;
+  example: string;
   flavor: string;
   bannedLetter?: string;
-  timeLimit?: number; // In seconds (e.g. 30)
+  timeLimit?: number; // In seconds (e.g. 45)
   timeRemaining?: number;
   deceptiveIndex?: number;
 }

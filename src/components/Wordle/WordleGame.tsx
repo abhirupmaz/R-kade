@@ -78,7 +78,8 @@ export const WordleGame: React.FC<WordleGameProps> = ({
     targetMode: GameMode,
     dKey: string,
     tWord: string,
-    notify: boolean = false
+    notify: boolean = false,
+    prevEval: EvaluatedLetter[] = []
   ) => {
     clearCurseTimer();
 
@@ -96,7 +97,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
       return;
     }
 
-    const nextCurse = getCurseForAttempt(attemptIdx, dKey, prevGuessWord, targetMode, tWord);
+    const nextCurse = getCurseForAttempt(attemptIdx, dKey, prevGuessWord, targetMode, tWord, prevEval);
     setActiveCurse(nextCurse);
 
     if (nextCurse) {
@@ -112,15 +113,18 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         
         if (profile.showCursePopups) {
           setCurseSplash(nextCurse);
-          setTimeout(() => setCurseSplash(null), 2200);
+          // No auto-dismiss — user must confirm
         }
       }
 
-      if (nextCurse.id === 'OVERLOAD_TIMER' && nextCurse.timeLimit) {
-        setTimerSeconds(nextCurse.timeLimit);
+      // OVERLOAD_TIMER starts only after the splash is dismissed (handled in dismissCurseSplash)
+      if (nextCurse.id !== 'OVERLOAD_TIMER' || !profile.showCursePopups) {
+        if (nextCurse.id === 'OVERLOAD_TIMER' && nextCurse.timeLimit) {
+          setTimerSeconds(nextCurse.timeLimit);
+        }
       }
     }
-  }, [clearCurseTimer, onShowToast]);
+  }, [clearCurseTimer, onShowToast, profile.showCursePopups]);
 
   // Initialize or switch modes
   const initGame = useCallback((targetMode: GameMode) => {
@@ -425,7 +429,7 @@ export const WordleGame: React.FC<WordleGameProps> = ({
           }
 
           // Advance Curse for Next Turn
-          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey, targetWord, true);
+          applyCurseForAttempt(newGuesses.length, submittedGuess, mode, dailyInfo.dateKey, targetWord, true, evalResult.letters);
         }
       }
 
@@ -653,22 +657,48 @@ export const WordleGame: React.FC<WordleGameProps> = ({
         </div>
       )}
 
-      {/* Brief Curse Splash Overlay */}
+      {/* Curse Splash Overlay — stays until player confirms */}
       {curseSplash && profile.showCursePopups && (
-        <div className="modal-overlay" style={{ zIndex: 110, pointerEvents: 'none', background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(2px)' }}>
-          <div style={{ 
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 110, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)', cursor: 'default' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{
             animation: 'scale-up-center 0.4s cubic-bezier(0.390, 0.575, 0.565, 1.000) both',
-            background: 'var(--bg-surface)', 
-            border: '2px solid #ef4444', 
-            padding: '24px 32px', 
-            borderRadius: '16px', 
+            background: 'linear-gradient(135deg, #1a0a0a, #1e0b0b)',
+            border: '2px solid #ef4444',
+            padding: '28px 32px',
+            borderRadius: '20px',
             textAlign: 'center',
-            boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)'
+            boxShadow: '0 0 40px rgba(239, 68, 68, 0.4)',
+            maxWidth: 360,
+            width: '90%',
           }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>{curseSplash.icon}</div>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#ef4444', letterSpacing: 1, textTransform: 'uppercase' }}>Curse Awakened!</h2>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginTop: 8 }}>{curseSplash.name}</div>
-            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 8 }}>{curseSplash.description}</div>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>{curseSplash.icon}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: '#ef4444', textTransform: 'uppercase', marginBottom: 4 }}>Curse Awakened</div>
+            <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 900, color: '#fff' }}>{curseSplash.name}</h2>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 10, lineHeight: 1.55 }}>{curseSplash.description}</p>
+            {curseSplash.id === 'GLITCH_MIRAGE' && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
+                ⚠️ This affects the NEXT guess you submit — not this one.
+              </div>
+            )}
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 16, fontStyle: 'italic' }}>{curseSplash.example}</p>
+            <button
+              className="hero-cta-btn"
+              style={{ fontSize: 14, padding: '10px 28px', background: '#ef4444', boxShadow: '0 0 16px rgba(239,68,68,0.4)' }}
+              onClick={() => {
+                setCurseSplash(null);
+                // If the curse was OVERLOAD_TIMER and popups were showing, start the timer NOW
+                if (curseSplash?.id === 'OVERLOAD_TIMER' && activeCurse?.timeLimit) {
+                  setTimerSeconds(activeCurse.timeLimit);
+                }
+                sound.playKeyTap();
+              }}
+            >
+              I Understand — Let's Go!
+            </button>
           </div>
         </div>
       )}
